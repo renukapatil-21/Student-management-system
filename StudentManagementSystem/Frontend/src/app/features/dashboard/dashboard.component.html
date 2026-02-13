@@ -1,0 +1,82 @@
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h1>{{ getGreeting() }}, {{ currentUser?.firstName }}!</h1>
+    <p>Welcome to the Student Management System Dashboard</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon students">📚</div>
+      <div class="stat-content">
+        <h3>{{ dashboardStats.totalStudents }}</h3>
+        <p>Total Students</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon admissions">👨‍🎓</div>
+      <div class="stat-content">
+        <h3>{{ dashboardStats.newAdmissions }}</h3>
+        <p>New Admissions</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon fees">💰</div>
+      <div class="stat-content">
+        <h3>${{ dashboardStats.feesCollected | number }}</h3>
+        <p>Fees Collected</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon inquiries">❓</div>
+      <div class="stat-content">
+        <h3>{{ dashboardStats.pendingInquiries }}</h3>
+        <p>Pending Inquiries</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-content">
+    <div class="content-section">
+      <h2>Recent Activities</h2>
+      <div class="activities-list">
+        <div class="activity-item" *ngFor="let activity of recentActivities">
+          <div class="activity-icon" [ngClass]="activity.type">
+            <span *ngIf="activity.type === 'admission'">👨‍🎓</span>
+            <span *ngIf="activity.type === 'payment'">💳</span>
+            <span *ngIf="activity.type === 'inquiry'">❓</span>
+            <span *ngIf="activity.type === 'update'">✏️</span>
+          </div>
+          <div class="activity-content">
+            <p>{{ activity.message }}</p>
+            <span class="activity-time">{{ activity.time }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <h2>Quick Actions</h2>
+      <div class="quick-actions">
+        <button class="action-btn" routerLink="/students/create">
+          <span class="action-icon">👨‍🎓</span>
+          Add New Student
+        </button>
+        <button class="action-btn" routerLink="/students">
+          <span class="action-icon">📋</span>
+          View Students
+        </button>
+        <button class="action-btn" routerLink="/fees">
+          <span class="action-icon">💰</span>
+          Manage Fees
+        </button>
+        <button class="action-btn" routerLink="/inquiries">
+          <span class="action-icon">❓</span>
+          Handle Inquiries
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

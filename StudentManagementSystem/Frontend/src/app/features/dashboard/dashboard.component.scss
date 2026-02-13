@@ -1,0 +1,164 @@
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.dashboard-header {
+  margin-bottom: 30px;
+  
+  h1 {
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 2rem;
+    font-weight: 600;
+  }
+  
+  p {
+    color: #666;
+    font-size: 1.1rem;
+  }
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  
+  .stat-icon {
+    font-size: 2rem;
+    padding: 12px;
+    border-radius: 50%;
+    
+    &.students { background: rgba(52, 152, 219, 0.1); }
+    &.admissions { background: rgba(46, 204, 113, 0.1); }
+    &.fees { background: rgba(241, 196, 15, 0.1); }
+    &.inquiries { background: rgba(231, 76, 60, 0.1); }
+  }
+  
+  .stat-content {
+    h3 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 4px;
+    }
+    
+    p {
+      color: #666;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+}
+
+.dashboard-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 30px;
+}
+
+.content-section {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  
+  h2 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 1.3rem;
+    font-weight: 600;
+  }
+}
+
+.activities-list {
+  .activity-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid #eee;
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    .activity-icon {
+      font-size: 1.5rem;
+      padding: 8px;
+      border-radius: 50%;
+      background: #f8f9fa;
+    }
+    
+    .activity-content {
+      flex: 1;
+      
+      p {
+        color: #333;
+        margin-bottom: 4px;
+        font-size: 0.9rem;
+      }
+      
+      .activity-time {
+        color: #888;
+        font-size: 0.8rem;
+      }
+    }
+  }
+}
+
+.quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  
+  .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: transform 0.2s ease;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+    
+    .action-icon {
+      font-size: 1.2rem;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  
+  .dashboard-header h1 {
+    font-size: 1.5rem;
+  }
+}
