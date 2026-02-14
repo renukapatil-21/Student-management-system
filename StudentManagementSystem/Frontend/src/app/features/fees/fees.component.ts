@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
+import { FeeService, Fee, PaymentRequest } from '../../core/services/fee.service';
 
 @Component({
   selector: 'app-fees',
@@ -123,22 +124,59 @@ import { ApiService } from '../../core/services/api.service';
       
       <!-- Recent Transactions -->
       <div class="section">
-        <h3>Recent Transactions</h3>
-        <div class="transactions-list">
-          <div class="transaction" *ngFor="let transaction of recentTransactions">
+        <h3>Recent Fee Transactions</h3>
+        <div class="transactions-summary">
+          <div class="summary-card">
+            <h4>Total Fees Collected</h4>
+            <p class="amount">\${{totalCollected | number:'1.2-2'}}</p>
+          </div>
+          <div class="summary-card">
+            <h4>Pending Amount</h4>
+            <p class="amount pending">\${{totalPending | number:'1.2-2'}}</p>
+          </div>
+          <div class="summary-card">
+            <h4>Total Fees</h4>
+            <p class="amount">\${{totalFees | number:'1.2-2'}}</p>
+          </div>
+        </div>
+        
+        <div class="transactions-list" *ngIf="!loading">
+          <div class="transaction" *ngFor="let fee of allFees">
             <div class="transaction-info">
-              <h4>{{ transaction.studentName }}</h4>
-              <p>{{ transaction.feeType }} - {{ transaction.amount | currency }}</p>
-              <small>{{ transaction.date | date:'medium' }}</small>
+              <h4>{{ fee.studentName }}</h4>
+              <p>{{ fee.feeType }} - \${{ fee.amount | number:'1.2-2' }}</p>
+              <p *ngIf="getStatusString(fee.status) === 'Paid' && fee.paymentDate">
+                Paid: \${{ fee.paidAmount | number:'1.2-2' }} on {{ fee.paymentDate | date:'medium' }}
+              </p>
+              <small>Due: {{ fee.dueDate | date:'short' }} | {{ fee.academicYear }} {{ fee.semester }}</small>
             </div>
-            <div class="transaction-status" [class]="transaction.status.toLowerCase()">
-              {{ transaction.status }}
+            <div class="transaction-actions">
+              <div class="transaction-status" [ngClass]="getStatusString(fee.status).toLowerCase()">
+                {{ getStatusString(fee.status) }}
+              </div>
+              <button 
+                *ngIf="getStatusString(fee.status) !== 'Paid'" 
+                (click)="payFee(fee)" 
+                [disabled]="isProcessing"
+                class="btn-pay">
+                {{ isProcessing && processingFeeId === fee.id ? 'Processing...' : 'Pay Now' }}
+              </button>
             </div>
           </div>
           
-          <div *ngIf="recentTransactions.length === 0" class="no-transactions">
-            <p>No recent transactions found.</p>
+          <div *ngIf="allFees.length === 0" class="no-transactions">
+            <p>No fee transactions found.</p>
           </div>
+        </div>
+        
+        <div *ngIf="loading" class="loading">
+          <div class="spinner"></div>
+          <p>Loading fee data...</p>
+        </div>
+        
+        <div *ngIf="error" class="error">
+          <p>{{ error }}</p>
+          <button (click)="loadFees()" class="btn-secondary">Retry</button>
         </div>
       </div>
     </div>
@@ -281,6 +319,67 @@ import { ApiService } from '../../core/services/api.service';
       color: #6c757d;
     }
     
+    /* Summary Cards */
+    .transactions-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .summary-card {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      border-left: 4px solid #007bff;
+    }
+    
+    .summary-card h4 {
+      margin: 0 0 10px 0;
+      font-size: 0.9rem;
+      color: #6c757d;
+      text-transform: uppercase;
+    }
+    
+    .summary-card .amount {
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin: 0;
+      color: #28a745;
+    }
+    
+    .summary-card .amount.pending {
+      color: #ffc107;
+    }
+    
+    /* Loading and Error States */
+    .loading, .error {
+      text-align: center;
+      padding: 40px;
+    }
+    
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #007bff;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      border-radius: 8px;
+    }
+    
     .transactions-list {
       max-height: 400px;
       overflow-y: auto;
@@ -294,6 +393,16 @@ import { ApiService } from '../../core/services/api.service';
       border: 1px solid #dee2e6;
       border-radius: 4px;
       margin-bottom: 10px;
+    }
+    
+    .transaction-info {
+      flex: 1;
+    }
+    
+    .transaction-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
     
     .transaction-info h4 {
@@ -319,6 +428,31 @@ import { ApiService } from '../../core/services/api.service';
       color: #155724;
     }
     
+    .transaction-status.paid {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    .transaction-status.pending {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    
+    .transaction-status.overdue {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    
+    .transaction-status.partiallypaid {
+      background-color: #d1ecf1;
+      color: #0c5460;
+    }
+    
+    .transaction-status.cancelled {
+      background-color: #e2e3e5;
+      color: #495057;
+    }
+    
     .transaction-status.pending {
       background-color: #fff3cd;
       color: #856404;
@@ -328,6 +462,26 @@ import { ApiService } from '../../core/services/api.service';
       text-align: center;
       color: #6c757d;
       padding: 40px;
+    }
+
+    .btn-pay {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn-pay:hover:not(:disabled) {
+      background: #218838;
+    }
+
+    .btn-pay:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
     }
     
     @media (max-width: 768px) {
@@ -345,11 +499,20 @@ export class FeesComponent implements OnInit {
   paymentForm: FormGroup;
   selectedStudent: any = null;
   isProcessing = false;
-  recentTransactions: any[] = [];
+  processingFeeId: string | null = null;
+  loading = true;
+  error: string | null = null;
+  
+  // Real fee data
+  allFees: Fee[] = [];
+  totalCollected = 0;
+  totalPending = 0;
+  totalFees = 0;
 
   constructor(
     private fb: FormBuilder,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private feeService: FeeService
   ) {
     this.paymentForm = this.fb.group({
       studentSearch: [''],
@@ -361,7 +524,74 @@ export class FeesComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.loadRecentTransactions();
+    this.loadFees();
+    
+    // Debug: Log form changes
+    this.paymentForm.get('feeType')?.valueChanges.subscribe(value => {
+      console.log('Fee Type changed to:', value);
+      console.log('AllFees length:', this.allFees.length);
+      console.log('Loading state:', this.loading);
+    });
+  }
+
+  loadFees() {
+    console.log('loadFees() called - setting loading to true');
+    this.loading = true;
+    this.error = null;
+    
+    this.feeService.getFees().subscribe({
+      next: (response) => {
+        console.log('API Response:', response);
+        if (response.success && response.data) {
+          this.allFees = response.data;
+          this.calculateTotals();
+          console.log('Fees loaded successfully:', this.allFees.length, 'fees');
+          console.log('AllFees data:', this.allFees);
+        } else {
+          this.error = 'Failed to load fee data';
+          console.error('Failed to load fee data:', response);
+        }
+        console.log('Setting loading to false');
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Error loading fees:', error);
+        this.error = `Failed to load fees: ${error.message || error}`;
+        console.log('Setting loading to false after error');
+        this.loading = false;
+      }
+    });
+  }
+  
+  calculateTotals() {
+    // Convert numeric status to string for compatibility
+    this.totalCollected = this.allFees
+      .filter(fee => this.getStatusString(fee.status) === 'Paid')
+      .reduce((sum, fee) => sum + fee.paidAmount, 0);
+      
+    this.totalPending = this.allFees
+      .filter(fee => {
+        const statusStr = this.getStatusString(fee.status);
+        return statusStr === 'Pending' || statusStr === 'Overdue';
+      })
+      .reduce((sum, fee) => sum + (fee.amount - fee.paidAmount), 0);
+      
+    this.totalFees = this.allFees.reduce((sum, fee) => sum + fee.amount, 0);
+  }
+
+  getStatusString(status: number | string): string {
+    if (typeof status === 'string') return status;
+    
+    // Convert numeric enum to string
+    const statusMap: { [key: number]: string } = {
+      0: 'Pending',
+      1: 'Paid', 
+      2: 'Overdue',
+      3: 'PartiallyPaid',
+      4: 'Cancelled'
+    };
+    
+    return statusMap[status] || 'Pending';
   }
 
   searchStudent() {
@@ -377,6 +607,38 @@ export class FeesComponent implements OnInit {
     }
   }
 
+  payFee(fee: Fee) {
+    this.isProcessing = true;
+    this.processingFeeId = fee.id;
+    
+    const payment: PaymentRequest = {
+      feeId: fee.id,
+      paymentAmount: fee.amount - fee.paidAmount, // Pay remaining amount
+      paymentMethod: 'Credit Card', // Default method
+      transactionId: `TXN${Date.now()}` // Generate transaction ID
+    };
+    
+    this.feeService.processPayment(payment).subscribe({
+      next: (response) => {
+        if (response.success) {
+          console.log('Payment processed successfully:', response.data);
+          // Reload fees to reflect the payment
+          this.loadFees();
+        } else {
+          this.error = response.message || 'Payment failed';
+        }
+        this.isProcessing = false;
+        this.processingFeeId = null;
+      },
+      error: (error) => {
+        console.error('Payment error:', error);
+        this.error = `Payment failed: ${error.message || error}`;
+        this.isProcessing = false;
+        this.processingFeeId = null;
+      }
+    });
+  }
+
   processPayment() {
     if (this.paymentForm.valid && this.selectedStudent) {
       this.isProcessing = true;
@@ -386,40 +648,15 @@ export class FeesComponent implements OnInit {
         ...this.paymentForm.value
       };
       
-      // Mock payment processing
+      // Mock payment processing - replace with actual API call
       setTimeout(() => {
-        this.recentTransactions.unshift({
-          studentName: `${this.selectedStudent.firstName} ${this.selectedStudent.lastName}`,
-          feeType: this.paymentForm.get('feeType')?.value,
-          amount: this.paymentForm.get('amount')?.value,
-          date: new Date(),
-          status: 'Completed'
-        });
+        // Reload fees after payment to reflect changes
+        this.loadFees();
         
         this.isProcessing = false;
         this.paymentForm.reset();
         this.selectedStudent = null;
       }, 2000);
     }
-  }
-
-  loadRecentTransactions() {
-    // Mock data - replace with actual API call
-    this.recentTransactions = [
-      {
-        studentName: 'Jane Smith',
-        feeType: 'Tuition Fee',
-        amount: 2000,
-        date: new Date(2026, 1, 10),
-        status: 'Completed'
-      },
-      {
-        studentName: 'Bob Johnson',
-        feeType: 'Lab Fee',
-        amount: 300,
-        date: new Date(2026, 1, 9),
-        status: 'Pending'
-      }
-    ];
   }
 }

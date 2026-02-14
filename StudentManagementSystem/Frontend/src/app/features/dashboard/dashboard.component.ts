@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { DashboardService, DashboardStats, RecentActivity } from '../../core/services/dashboard.service';
@@ -363,9 +363,13 @@ export class DashboardComponent implements OnInit {
   loading = true;
   error: string | null = null;
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
+    console.log('Dashboard component initialized, loading:', this.loading);
     this.loadDashboardData();
     
     // Add a timeout fallback in case API calls take too long
@@ -383,16 +387,32 @@ export class DashboardComponent implements OnInit {
           { type: 'info', message: 'Unable to load recent activities. Please check API connection.', time: 'Just now', timestamp: new Date().toISOString() }
         ];
         this.loading = false;
+        this.cdr.detectChanges();
         this.error = 'API connection timeout - showing default data';
       }
     }, 5000); // 5 second timeout
   }
 
   loadDashboardData() {
+    console.log('Loading dashboard data started, setting loading to true');
     this.loading = true;
     this.error = null;
+    this.cdr.detectChanges(); // Ensure loading state is updated immediately
 
     console.log('Loading dashboard data...');
+
+    // Track completion of both API calls
+    let statsLoaded = false;
+    let activitiesLoaded = false;
+
+    const checkIfComplete = () => {
+      console.log('Checking completion - statsLoaded:', statsLoaded, 'activitiesLoaded:', activitiesLoaded);
+      if (statsLoaded && activitiesLoaded) {
+        this.loading = false;
+        this.cdr.detectChanges(); // Manually trigger change detection
+        console.log('Dashboard data loading completed, loading set to false');
+      }
+    };
 
     // Load dashboard statistics
     this.dashboardService.getDashboardStats().subscribe({
@@ -405,6 +425,9 @@ export class DashboardComponent implements OnInit {
           this.error = 'Failed to load dashboard statistics';
           console.error('Dashboard stats response unsuccessful:', response);
         }
+        statsLoaded = true;
+        this.cdr.detectChanges();
+        checkIfComplete();
       },
       error: (error) => {
         console.error('Error loading dashboard stats:', error);
@@ -417,6 +440,9 @@ export class DashboardComponent implements OnInit {
           pendingInquiries: 0,
           lastUpdated: new Date().toISOString()
         };
+        statsLoaded = true;
+        this.cdr.detectChanges();
+        checkIfComplete();
       }
     });
 
@@ -428,7 +454,9 @@ export class DashboardComponent implements OnInit {
           this.recentActivities = response.data;
           console.log('Recent activities loaded successfully:', this.recentActivities);
         }
-        this.loading = false;
+        activitiesLoaded = true;
+        this.cdr.detectChanges();
+        checkIfComplete();
       },
       error: (error) => {
         console.error('Error loading recent activities:', error);
@@ -436,7 +464,9 @@ export class DashboardComponent implements OnInit {
         this.recentActivities = [
           { type: 'info', message: 'Welcome to Student Management System', time: 'Just now', timestamp: new Date().toISOString() }
         ];
-        this.loading = false;
+        activitiesLoaded = true;
+        this.cdr.detectChanges();
+        checkIfComplete();
       }
     });
   }

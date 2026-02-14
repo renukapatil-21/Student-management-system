@@ -9,12 +9,14 @@ namespace StudentAPI.Controllers;
 public class FeesController : ControllerBase
 {
     private readonly ILogger<FeesController> _logger;
-    private readonly FeeService _feeService;
+    private readonly FeeService? _feeService;
+    private readonly InMemoryFeeService? _inMemoryFeeService;
 
-    public FeesController(ILogger<FeesController> logger, FeeService feeService)
+    public FeesController(ILogger<FeesController> logger, FeeService? feeService = null, InMemoryFeeService? inMemoryFeeService = null)
     {
         _logger = logger;
         _feeService = feeService;
+        _inMemoryFeeService = inMemoryFeeService;
     }
 
     [HttpGet]
@@ -22,7 +24,9 @@ public class FeesController : ControllerBase
     {
         try
         {
-            var fees = await _feeService.GetAsync();
+            var fees = _feeService != null ? await _feeService.GetAsync() : 
+                      _inMemoryFeeService != null ? await _inMemoryFeeService.GetAsync() : 
+                      new List<Fee>();
             return Ok(new { success = true, data = fees, message = "Fees retrieved successfully" });
         }
         catch (Exception ex)
@@ -37,7 +41,9 @@ public class FeesController : ControllerBase
     {
         try
         {
-            var fee = await _feeService.GetAsync(id);
+            var fee = _feeService != null ? await _feeService.GetAsync(id) : 
+                     _inMemoryFeeService != null ? await _inMemoryFeeService.GetAsync(id) : 
+                     null;
             
             if (fee is null)
             {
@@ -53,94 +59,38 @@ public class FeesController : ControllerBase
         }
     }
 
-    [HttpGet("student/{studentId}")]
-    public async Task<IActionResult> GetFeesByStudent(string studentId)
+    [HttpGet("statistics")]
+    public async Task<IActionResult> GetFeeStatistics()
     {
         try
         {
-            var fees = await _feeService.GetByStudentIdAsync(studentId);
-            return Ok(new { success = true, data = fees, message = "Student fees retrieved successfully" });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving fees for student: {StudentId}", studentId);
-            return StatusCode(500, new { success = false, message = "Error retrieving student fees", error = ex.Message });
-        }
-    }
+            var fees = _feeService != null ? await _feeService.GetAsync() : 
+                      _inMemoryFeeService != null ? await _inMemoryFeeService.GetAsync() : 
+                      new List<Fee>();
 
-    [HttpGet("pending")]
-    public async Task<IActionResult> GetPendingFees()
-    {
-        try
-        {
-            var fees = await _feeService.GetPendingFeesAsync();
-            return Ok(new { success = true, data = fees, message = "Pending fees retrieved successfully" });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving pending fees");
-            return StatusCode(500, new { success = false, message = "Error retrieving pending fees", error = ex.Message });
-        }
-    }
+            var totalCollected = fees.Where(f => f.Status == FeeStatus.Paid).Sum(f => f.Amount);
+            var pendingAmount = fees.Where(f => f.Status == FeeStatus.Pending).Sum(f => f.Amount);
+            var overdueAmount = fees.Where(f => f.Status == FeeStatus.Overdue).Sum(f => f.Amount);
+            var totalStudents = fees.Select(f => f.StudentId).Distinct().Count();
 
-    [HttpGet("overdue")]
-    public async Task<IActionResult> GetOverdueFees()
-    {
-        try
-        {
-            var fees = await _feeService.GetOverdueFeesAsync();
-            return Ok(new { success = true, data = fees, message = "Overdue fees retrieved successfully" });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving overdue fees");
-            return StatusCode(500, new { success = false, message = "Error retrieving overdue fees", error = ex.Message });
-        }
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> CreateFee([FromBody] Fee fee)
-    {
-        try
-        {
-            if (!ModelState.IsValid)
+            return Ok(new
             {
-                return BadRequest(new { success = false, message = "Invalid fee data", errors = ModelState });
-            }
-
-            await _feeService.CreateAsync(fee);
-            return CreatedAtAction(nameof(GetFee), new { id = fee.Id }, 
-                new { success = true, data = fee, message = "Fee created successfully" });
+                success = true,
+                data = new
+                {
+                    totalCollected,
+                    pendingAmount,
+                    overdueAmount,
+                    totalStudents,
+                    totalFees = fees.Count
+                },
+                message = "Fee statistics retrieved successfully"
+            });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating fee");
-            return StatusCode(500, new { success = false, message = "Error creating fee", error = ex.Message });
-        }
-    }
-
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateFee(string id, [FromBody] Fee updatedFee)
-    {
-        try
-        {
-            var fee = await _feeService.GetAsync(id);
-
-            if (fee is null)
-            {
-                return NotFound(new { success = false, message = "Fee not found" });
-            }
-
-            updatedFee.Id = fee.Id;
-            updatedFee.CreatedAt = fee.CreatedAt;
-
-            await _feeService.UpdateAsync(id, updatedFee);
-            return Ok(new { success = true, data = updatedFee, message = "Fee updated successfully" });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating fee with ID: {FeeId}", id);
-            return StatusCode(500, new { success = false, message = "Error updating fee", error = ex.Message });
+            _logger.LogError(ex, "Error retrieving fee statistics");
+            return StatusCode(500, new { success = false, message = "Error retrieving statistics", error = ex.Message });
         }
     }
 
@@ -149,64 +99,39 @@ public class FeesController : ControllerBase
     {
         try
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(new { success = false, message = "Invalid payment data", errors = ModelState });
-            }
-
-            await _feeService.ProcessPaymentAsync(id, payment.Amount, payment.PaymentMethod, payment.TransactionId);
-            return Ok(new { success = true, message = "Payment processed successfully" });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing payment for fee: {FeeId}", id);
-            return StatusCode(500, new { success = false, message = "Error processing payment", error = ex.Message });
-        }
-    }
-
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteFee(string id)
-    {
-        try
-        {
-            var fee = await _feeService.GetAsync(id);
-
+            var fee = _feeService != null ? await _feeService.GetAsync(id) : 
+                     _inMemoryFeeService != null ? await _inMemoryFeeService.GetAsync(id) : 
+                     null;
+            
             if (fee is null)
             {
                 return NotFound(new { success = false, message = "Fee not found" });
             }
 
-            await _feeService.RemoveAsync(id);
-            return Ok(new { success = true, message = "Fee deleted successfully" });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting fee with ID: {FeeId}", id);
-            return StatusCode(500, new { success = false, message = "Error deleting fee", error = ex.Message });
-        }
-    }
+            if (fee.Status == FeeStatus.Paid)
+            {
+                return BadRequest(new { success = false, message = "Fee is already paid" });
+            }
 
-    [HttpGet("stats")]
-    public async Task<IActionResult> GetFeeStats()
-    {
-        try
-        {
-            var totalCollected = await _feeService.GetTotalCollectedAsync();
-            var pendingCount = await _feeService.GetPendingCountAsync();
-            
-            return Ok(new { 
-                success = true, 
-                data = new { 
-                    totalCollected, 
-                    pendingCount
-                }, 
-                message = "Fee statistics retrieved successfully" 
-            });
+            // Update fee status and payment details
+            fee.Status = FeeStatus.Paid;
+            fee.PaidAmount = payment.Amount;
+            fee.PaymentDate = DateTime.UtcNow;
+            fee.PaymentMethod = payment.PaymentMethod;
+            fee.TransactionId = payment.TransactionId;
+            fee.UpdatedAt = DateTime.UtcNow;
+
+            if (_feeService != null)
+                await _feeService.UpdateAsync(id, fee);
+            else if (_inMemoryFeeService != null)
+                await _inMemoryFeeService.UpdateAsync(id, fee);
+
+            return Ok(new { success = true, data = fee, message = "Payment processed successfully" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving fee statistics");
-            return StatusCode(500, new { success = false, message = "Error retrieving statistics", error = ex.Message });
+            _logger.LogError(ex, "Error processing payment for fee ID: {FeeId}", id);
+            return StatusCode(500, new { success = false, message = "Error processing payment", error = ex.Message });
         }
     }
 }
