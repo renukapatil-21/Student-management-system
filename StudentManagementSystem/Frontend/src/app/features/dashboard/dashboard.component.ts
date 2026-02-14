@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { DashboardService, DashboardStats, RecentActivity } from '../../core/services/dashboard.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -10,40 +11,57 @@ import { RouterModule } from '@angular/router';
     <div class="dashboard-container">
       <h1>Student Management Dashboard</h1>
       
-      <!-- Stats Cards -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon">👥</div>
-          <div class="stat-content">
-            <h3>Total Students</h3>
-            <p class="stat-number">{{dashboardStats.totalStudents}}</p>
-          </div>
-        </div>
-        
-        <div class="stat-card">
-          <div class="stat-icon">📚</div>
-          <div class="stat-content">
-            <h3>New Admissions</h3>
-            <p class="stat-number">{{dashboardStats.newAdmissions}}</p>
-          </div>
-        </div>
-        
-        <div class="stat-card">
-          <div class="stat-icon">💰</div>
-          <div class="stat-content">
-            <h3>Fees Collected</h3>
-            <p class="stat-number">\${{dashboardStats.feesCollected | number}}</p>
-          </div>
-        </div>
-        
-        <div class="stat-card">
-          <div class="stat-icon">❓</div>
-          <div class="stat-content">
-            <h3>Pending Inquiries</h3>
-            <p class="stat-number">{{dashboardStats.pendingInquiries}}</p>
-          </div>
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading dashboard data...</p>
+      </div>
+      
+      <!-- Error State -->
+      <div *ngIf="error && !loading" class="error-state">
+        <div class="error-message">
+          <span class="error-icon">⚠️</span>
+          <p>{{error}}</p>
+          <button (click)="loadDashboardData()" class="retry-btn">Try Again</button>
         </div>
       </div>
+      
+      <!-- Dashboard Content -->
+      <div *ngIf="!loading && !error">
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-content">
+              <h3>Total Students</h3>
+              <p class="stat-number">{{dashboardStats?.totalStudents || 0}}</p>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon">📚</div>
+            <div class="stat-content">
+              <h3>New Admissions</h3>
+              <p class="stat-number">{{dashboardStats?.newAdmissions || 0}}</p>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-content">
+              <h3>Fees Collected</h3>
+              <p class="stat-number">\${{(dashboardStats?.feesCollected || 0) | number:'1.2-2'}}</p>
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <div class="stat-icon">❓</div>
+            <div class="stat-content">
+              <h3>Pending Inquiries</h3>
+              <p class="stat-number">{{dashboardStats?.pendingInquiries || 0}}</p>
+            </div>
+          </div>
+        </div>
       
       <!-- Action Cards -->
       <div class="actions-section">
@@ -96,6 +114,7 @@ import { RouterModule } from '@angular/router';
               <small>{{activity.time}}</small>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -263,6 +282,56 @@ import { RouterModule } from '@angular/router';
       font-size: 0.8rem;
     }
     
+    /* Loading and Error States */
+    .loading-state, .error-state {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #007bff;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .error-message {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #f1aeb5;
+      display: inline-block;
+    }
+    
+    .error-icon {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 10px;
+    }
+    
+    .retry-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    
+    .retry-btn:hover {
+      background: #c82333;
+    }
+    
     @media (max-width: 768px) {
       .dashboard-container {
         padding: 10px;
@@ -289,24 +358,87 @@ import { RouterModule } from '@angular/router';
   `]
 })
 export class DashboardComponent implements OnInit {
-  dashboardStats = {
-    totalStudents: 1250,
-    newAdmissions: 45,
-    feesCollected: 125000,
-    pendingInquiries: 12
-  };
+  dashboardStats: DashboardStats | null = null;
+  recentActivities: RecentActivity[] = [];
+  loading = true;
+  error: string | null = null;
 
-  recentActivities = [
-    { type: 'admission', message: 'New student John Doe admitted to Computer Science', time: '2 hours ago' },
-    { type: 'payment', message: 'Fee payment of $2500 received from Sarah Smith', time: '4 hours ago' },
-    { type: 'inquiry', message: 'New inquiry from parent about admission process', time: '6 hours ago' },
-    { type: 'update', message: 'Student profile updated for Mike Johnson', time: '8 hours ago' }
-  ];
-
-  constructor() {}
+  constructor(private dashboardService: DashboardService) {}
 
   ngOnInit() {
-    // Component initialization
+    this.loadDashboardData();
+    
+    // Add a timeout fallback in case API calls take too long
+    setTimeout(() => {
+      if (this.loading) {
+        console.warn('Dashboard data loading timeout - showing fallback data');
+        this.dashboardStats = {
+          totalStudents: 0,
+          newAdmissions: 0,
+          feesCollected: 0,
+          pendingInquiries: 0,
+          lastUpdated: new Date().toISOString()
+        };
+        this.recentActivities = [
+          { type: 'info', message: 'Unable to load recent activities. Please check API connection.', time: 'Just now', timestamp: new Date().toISOString() }
+        ];
+        this.loading = false;
+        this.error = 'API connection timeout - showing default data';
+      }
+    }, 5000); // 5 second timeout
+  }
+
+  loadDashboardData() {
+    this.loading = true;
+    this.error = null;
+
+    console.log('Loading dashboard data...');
+
+    // Load dashboard statistics
+    this.dashboardService.getDashboardStats().subscribe({
+      next: (response) => {
+        console.log('Dashboard stats response:', response);
+        if (response.success && response.data) {
+          this.dashboardStats = response.data;
+          console.log('Dashboard stats loaded successfully:', this.dashboardStats);
+        } else {
+          this.error = 'Failed to load dashboard statistics';
+          console.error('Dashboard stats response unsuccessful:', response);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading dashboard stats:', error);
+        this.error = `Failed to load dashboard statistics: ${error.message || error}`;
+        // Fallback to default values
+        this.dashboardStats = {
+          totalStudents: 0,
+          newAdmissions: 0,
+          feesCollected: 0,
+          pendingInquiries: 0,
+          lastUpdated: new Date().toISOString()
+        };
+      }
+    });
+
+    // Load recent activities
+    this.dashboardService.getRecentActivities().subscribe({
+      next: (response) => {
+        console.log('Recent activities response:', response);
+        if (response.success && response.data) {
+          this.recentActivities = response.data;
+          console.log('Recent activities loaded successfully:', this.recentActivities);
+        }
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Error loading recent activities:', error);
+        // Keep default activities as fallback
+        this.recentActivities = [
+          { type: 'info', message: 'Welcome to Student Management System', time: 'Just now', timestamp: new Date().toISOString() }
+        ];
+        this.loading = false;
+      }
+    });
   }
 
   getActivityIcon(type: string): string {

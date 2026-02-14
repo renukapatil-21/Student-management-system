@@ -20,6 +20,8 @@ try
     {
         // Use in-memory services for local development
         builder.Services.AddSingleton<IStudentService, InMemoryStudentService>();
+        builder.Services.AddSingleton<InMemoryFeeService>();
+        builder.Services.AddSingleton<InMemoryInquiryService>();
         Console.WriteLine("Using in-memory database for development.");
     }
     else
@@ -37,6 +39,8 @@ catch (Exception ex)
 {
     // Fallback to in-memory services
     builder.Services.AddSingleton<IStudentService, InMemoryStudentService>();
+    builder.Services.AddSingleton<InMemoryFeeService>();
+    builder.Services.AddSingleton<InMemoryInquiryService>();
     Console.WriteLine($"Failed to connect to MongoDB, using in-memory database: {ex.Message}");
 }
 

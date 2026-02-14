@@ -1,22 +1,65 @@
-<div class="app-container">
-  <nav class="navbar" *ngIf="authService.isAuthenticated()">
-    <div class="nav-brand">
-      <h2>Student Management System</h2>
+<div class="app-container" *ngIf="authService.isAuthenticated()">
+  <!-- Sidebar Navigation -->
+  <nav class="sidebar" [class.collapsed]="sidebarCollapsed">
+    <div class="sidebar-header">
+      <h2 *ngIf="!sidebarCollapsed">SMS</h2>
+      <h2 *ngIf="sidebarCollapsed">S</h2>
+      <span class="sidebar-subtitle" *ngIf="!sidebarCollapsed">Student Management</span>
     </div>
+    
     <div class="nav-links">
-      <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
-      <a routerLink="/add-student" routerLinkActive="active">Add Student</a>
-      <a routerLink="/students" routerLinkActive="active">View Students</a>
-      <a routerLink="/fees" routerLinkActive="active">Manage Fees</a>
-      <a routerLink="/inquiries" routerLinkActive="active">Handle Queries</a>
-      <div class="user-menu">
-        <span class="user-name">{{ authService.getCurrentUser()?.name }}</span>
-        <button class="logout-btn" (click)="logout()">Logout</button>
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-link" [title]="sidebarCollapsed ? 'Dashboard' : ''">
+        <i class="icon">📊</i>
+        <span *ngIf="!sidebarCollapsed">Dashboard</span>
+      </a>
+      <a routerLink="/students" routerLinkActive="active" class="nav-link" [title]="sidebarCollapsed ? 'View Students' : ''">
+        <i class="icon">👥</i>
+        <span *ngIf="!sidebarCollapsed">View Students</span>
+      </a>
+      <a routerLink="/add-student" routerLinkActive="active" class="nav-link" [title]="sidebarCollapsed ? 'Add Student' : ''">
+        <i class="icon">➕</i>
+        <span *ngIf="!sidebarCollapsed">Add Student</span>
+      </a>
+      <a routerLink="/fees" routerLinkActive="active" class="nav-link" [title]="sidebarCollapsed ? 'Manage Fees' : ''">
+        <i class="icon">💰</i>
+        <span *ngIf="!sidebarCollapsed">Manage Fees</span>
+      </a>
+      <a routerLink="/inquiries" routerLinkActive="active" class="nav-link" [title]="sidebarCollapsed ? 'Handle Queries' : ''">
+        <i class="icon">❓</i>
+        <span *ngIf="!sidebarCollapsed">Handle Queries</span>
+      </a>
+    </div>
+    
+    <!-- User menu at bottom of sidebar -->
+    <div class="sidebar-footer">
+      <div class="user-info" *ngIf="!sidebarCollapsed">
+        <div class="user-avatar">{{ authService.getCurrentUser()?.name?.charAt(0) || 'U' }}</div>
+        <div class="user-details">
+          <span class="user-name">{{ authService.getCurrentUser()?.name }}</span>
+          <span class="user-role">{{ authService.getCurrentUser()?.role }}</span>
+        </div>
       </div>
+      <div class="user-avatar-collapsed" *ngIf="sidebarCollapsed" [title]="authService.getCurrentUser()?.name || 'User'">
+        {{ authService.getCurrentUser()?.name?.charAt(0) || 'U' }}
+      </div>
+      <button class="logout-btn" (click)="logout()" [title]="sidebarCollapsed ? 'Logout' : ''">
+        <i class="icon">🚪</i>
+      </button>
     </div>
   </nav>
-  
-  <main class="main-content" [class.full-height]="!authService.isAuthenticated()">
+
+  <!-- Toggle Button -->
+  <button class="sidebar-toggle" (click)="toggleSidebar()">
+    <i class="icon">{{ sidebarCollapsed ? '→' : '←' }}</i>
+  </button>
+
+  <!-- Main Content Area -->
+  <main class="main-content" [class.expanded]="sidebarCollapsed">
     <router-outlet></router-outlet>
   </main>
+</div>
+
+<!-- Full screen for login/register pages -->
+<div class="auth-container" *ngIf="!authService.isAuthenticated()">
+  <router-outlet></router-outlet>
 </div>

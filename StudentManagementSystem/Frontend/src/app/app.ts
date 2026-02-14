@@ -12,6 +12,7 @@ import { Router } from '@angular/router';
 })
 export class App {
   title = 'Student Management System';
+  sidebarCollapsed = false;
 
   constructor(
     public authService: AuthService,
@@ -21,5 +22,9 @@ export class App {
   logout() {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  toggleSidebar() {
+    this.sidebarCollapsed = !this.sidebarCollapsed;
   }
 }
