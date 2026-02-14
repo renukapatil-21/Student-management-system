@@ -1,5 +1,5 @@
 <div class="app-container">
-  <nav class="navbar">
+  <nav class="navbar" *ngIf="authService.isAuthenticated()">
     <div class="nav-brand">
       <h2>Student Management System</h2>
     </div>
@@ -9,11 +9,14 @@
       <a routerLink="/students" routerLinkActive="active">View Students</a>
       <a routerLink="/fees" routerLinkActive="active">Manage Fees</a>
       <a routerLink="/inquiries" routerLinkActive="active">Handle Queries</a>
-      <a routerLink="/login" routerLinkActive="active">Login</a>
+      <div class="user-menu">
+        <span class="user-name">{{ authService.getCurrentUser()?.name }}</span>
+        <button class="logout-btn" (click)="logout()">Logout</button>
+      </div>
     </div>
   </nav>
   
-  <main class="main-content">
+  <main class="main-content" [class.full-height]="!authService.isAuthenticated()">
     <router-outlet></router-outlet>
   </main>
 </div>

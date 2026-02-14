@@ -134,3 +134,24 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.register-link {
+  text-align: center;
+  margin-top: 20px;
+  
+  p {
+    color: #666;
+    margin: 0;
+  }
+  
+  a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 500;
+    
+    &:hover {
+      color: #5a6fd8;
+      text-decoration: underline;
+    }
+  }
+}

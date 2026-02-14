@@ -3,12 +3,10 @@ import { ApiService, ApiResponse } from './api.service';
 import { Observable, BehaviorSubject, tap } from 'rxjs';
 
 export interface User {
-  id: string;
+  id?: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   role: string;
-  fullName: string;
 }
 
 export interface LoginRequest {
@@ -17,10 +15,21 @@ export interface LoginRequest {
   rememberMe?: boolean;
 }
 
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  name: string;
+}
+
+export interface LoginResponse {
+  email: string;
+  password: string;
+  name: string;
+}
+
 export interface LoginResponse {
   user: User;
   token: string;
-  expiresAt: string;
 }
 
 @Injectable({
@@ -37,6 +46,16 @@ export class AuthService {
 
   login(loginRequest: LoginRequest): Observable<ApiResponse<LoginResponse>> {
     return this.apiService.post<LoginResponse>('auth/login', loginRequest).pipe(
+      tap(response => {
+        if (response.success && response.data) {
+          this.setCurrentUser(response.data.user, response.data.token);
+        }
+      })
+    );
+  }
+
+  register(registerRequest: RegisterRequest): Observable<ApiResponse<LoginResponse>> {
+    return this.apiService.post<LoginResponse>('auth/register', registerRequest).pipe(
       tap(response => {
         if (response.success && response.data) {
           this.setCurrentUser(response.data.user, response.data.token);

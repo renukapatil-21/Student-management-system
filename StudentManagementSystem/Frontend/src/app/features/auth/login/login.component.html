@@ -50,6 +50,12 @@
         <span *ngIf="loading" class="spinner"></span>
         {{ loading ? 'Signing in...' : 'Sign In' }}
       </button>
+      
+      <div class="register-link">
+        <p>Don't have an account? 
+          <a href="#" (click)="goToRegister($event)">Sign up here</a>
+        </p>
+      </div>
     </form>
   </div>
 </div>
